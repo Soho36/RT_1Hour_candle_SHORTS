@@ -169,11 +169,11 @@ def get_entry_price():  # Read entry price from entry_price.csv
 #         print(f"OB candle HIGH/LOW ({hi, lo}) is saved to {ob_candle_file_path}")
 
 
-def save_ob_candle_ohlc(lo):  # Save OB candle OHLC to file
+def save_ob_candle_ohlc(hi):  # Save OB candle OHLC to file
     with open(ob_candle_file_path, 'w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
-        writer.writerow([lo])
-        print(f"OB candle LOW ({lo}) is saved to {ob_candle_file_path}")
+        writer.writerow([hi])
+        print(f"OB candle HIGH ({hi}) is saved to {ob_candle_file_path}")
 
 
 def get_initial_sl():  # Read initial stop loss from sl_order_initial.csv

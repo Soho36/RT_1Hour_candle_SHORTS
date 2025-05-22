@@ -66,22 +66,22 @@ def hourly_engulf_signals(
         # trailing_sl_for_longs = current_candle_low
         flatten_at_candle_close = current_candle_close - 2
 
-        if active_position() == 'opened_long':
-            print(Fore.GREEN + Style.DIM + "Active position is open (longs)")
+        if active_position() == 'opened_short':
+            print(Fore.GREEN + Style.DIM + "Active position is open (shorts)")
             entry_price = get_entry_price()
             initial_sl_longs = get_initial_sl()
-            risk_points = abs(entry_price - initial_sl_longs)
+            risk_points = abs(entry_price + initial_sl_longs)
 
             print(f'entry_price: {entry_price}'.upper())
             print(f'initial_sl_longs: {initial_sl_longs}'.upper())
             print(f'risk_points: {risk_points}'.upper())
 
-            if current_candle_close - entry_price > risk_points:
+            if entry_price - current_candle_close > risk_points:
                 write_sl_tp(flatten_at_candle_close)
 
             else:
                 write_sl_tp(initial_sl_longs)
-                print("SL and TP orders are written to file (longs)")
+                print("SL and TP orders are written to file (shorts)")
 
         # +------------------------------------------------------------------+
         # LONGS
@@ -94,16 +94,16 @@ def hourly_engulf_signals(
                     f"Time: {current_candle_time}\n"
                     f"Min: {current_candle_min_size}, Body: {current_candle_range}, Max: {current_candle_max_size}"
                 )
-                # print('SEND BUY_STOP')
+
                 print(Fore.GREEN + Style.BRIGHT + 'SEND BUY_STOP')
                 signal = f'100+{index}'
                 signals_counter += 1
                 side = 'long'
 
                 # Save the candle data to a file
-                if active_position() != 'opened_long':
-                    print("There is no active position, OB candle low is saved")
-                    save_ob_candle_ohlc(current_candle_low)
+                # if active_position() != 'opened_long':
+                #     print("There is no active position, OB candle low is saved")
+                #     save_ob_candle_ohlc(current_candle_low)
 
                 s_signal, n_index, t_price, s_time = signal_triggered_output(
                     index,
@@ -129,16 +129,15 @@ def hourly_engulf_signals(
                     f"Min: {current_candle_min_size}, Body: {current_candle_range}, Max: {current_candle_max_size}"
                 )
 
-                # print('SEND SELL_STOP')
                 print(Fore.RED + Style.BRIGHT + 'SEND SELL_STOP')
                 signal = f'-100+{index}'
-
                 signals_counter += 1
                 side = 'short'
 
                 # Save the candle data to a file
-                # if not active_position():
-                #     save_ob_candle_ohlc(current_candle_high)
+                if active_position() != 'opened_short':
+                    print("There is no active position, OB candle high is saved")
+                    save_ob_candle_ohlc(current_candle_high)
 
                 s_signal, n_index, t_price, s_time = signal_triggered_output(
                     index,
@@ -149,7 +148,7 @@ def hourly_engulf_signals(
                 )
 
             else:
-                # print("GREEN candle size is not OK")
+                print("GREEN candle size is not OK")
                 print(Fore.YELLOW + Style.BRIGHT + "GREEN candle size is not OK")
 
     return (
