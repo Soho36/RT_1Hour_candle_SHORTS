@@ -186,7 +186,16 @@ def get_initial_sl():  # Read initial stop loss from sl_order_initial.csv
 
 
 def write_sl_tp(sl):    # Write stop loss and take profit to file
-    with open(sl_orders_file_path, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([sl])
-    print(f"[INFO] SL: {sl} written to {sl_orders_file_path}")
+    retries = 5
+    for attempt in range(retries):
+        try:
+            with open(sl_orders_file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([sl])
+            print(f"[INFO] SL: {sl} written to {sl_orders_file_path}")
+            break
+        except PermissionError:
+            print(f"Attempt {attempt + 1} failed. Retrying...")
+            time.sleep(1)
+    else:
+        print("Failed to write to the file after multiple attempts.")

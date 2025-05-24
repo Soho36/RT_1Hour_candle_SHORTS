@@ -154,9 +154,18 @@ namespace NinjaTrader.NinjaScript.Strategies
 						            CancelOrder(slOrder);
 						        }
 
-
-						        slOrder = ExitLongStopMarket(Position.Quantity, stopLossPrice, "SL_Stop", "");
-			
+								if (stopLossPrice < GetCurrentBid())
+								{
+									slOrder = ExitLongStopMarket(Position.Quantity, stopLossPrice, "SL_Stop", "");
+									Print($"Submitted SL at {stopLossPrice}");
+								}
+								else
+								{
+									Print($"[WARNING] SL not submitted — stop price {stopLossPrice} is above market ({GetCurrentBid()}). Closing position immediately.");
+									
+									// Close the long position at market
+									ExitLong("ForceClose_Long");
+								}	
 								if (slOrder == null)
 								    Print($"[ERROR] SL order was not submitted. Value: {stopLossPrice}, Position qty: {Position.Quantity}");
 								else    	

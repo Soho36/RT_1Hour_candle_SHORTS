@@ -26,7 +26,7 @@ using NinjaTrader.NinjaScript.DrawingTools;
 
 namespace NinjaTrader.NinjaScript.Strategies
 {
-    public class MyCustomStrategyLongOnly : Strategy
+    public class MyCustomStrategyShortOnly : Strategy
 	
     {
 		[NinjaScriptProperty]
@@ -49,15 +49,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 		[Display(Name = "OB Candle H/L File Path", Order = 5, GroupName = "File Paths")]
 		public string OBCandleHighLowPath { get; set; }	
 		
-		private bool executeLongTrade = false;
-
-		private double entryPriceLongOnly = 0;
+		private bool executeShortTrade = false;
+		private double entryPriceShortOnly = 0;
 		private double stopPrice = 0;
-
         private double targetPrice1 = 0;
-
-		private Order longOrder1;
-		
+		private Order shortOrder1;
 		private Order slOrder = null;
 
 		private string lastPositionState = "closed"; // Tracks the last written position state
@@ -77,7 +73,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				SLOrdersFilePath = @"C:\Users\Liikurserv\PycharmProjects\RT_1Hour_candle\sl_orders.csv";
 				OBCandleHighLowPath = @"C:\Users\Liikurserv\PycharmProjects\RT_1Hour_candle\OB_candle_HL.csv";
 	
-                Name = "Filetransmit_LongOnly";
+                Name = "Filetransmit_ShortOnly";
                 Calculate = Calculate.OnEachTick;
                 EntriesPerDirection = 1; // Allow entries
                 EntryHandling = EntryHandling.UniqueEntries;
@@ -119,18 +115,18 @@ namespace NinjaTrader.NinjaScript.Strategies
 					if (parts.Length == 6)
 						Print($"Signal file content: {signal}");
 					{
-						string tradeDirection = parts[0].Trim();                    // Direction
+						string tradeDirection = parts[0].Trim();                    // Direction (Buy or Sell)
 						if (
-							double.TryParse(parts[1].Trim(), out entryPriceLongOnly) &&     // entryPriceLongOnly
+							double.TryParse(parts[1].Trim(), out entryPriceShortOnly) &&     // entryPriceShortOnly
 							double.TryParse(parts[2].Trim(), out stopPrice) &&      // Stop-loss price
 							double.TryParse(parts[3].Trim(), out targetPrice1)   // Take-profit1 price
 							)
 						{
-							if (tradeDirection.Equals("Buy", StringComparison.OrdinalIgnoreCase))
+							if (tradeDirection.Equals("Sell", StringComparison.OrdinalIgnoreCase))
 							{
 								if (Position.MarketPosition == MarketPosition.Flat)
 								{
-									executeLongTrade = true;
+									executeShortTrade = true;
 									File.WriteAllText(SignalFilePath, string.Empty);
 								}
 							}
@@ -141,36 +137,46 @@ namespace NinjaTrader.NinjaScript.Strategies
 					{	
 						for (int i = 0; i < 5; i++) // 5 attempts to read if file is locked by python
 						{
-						    try
-						    {
-						        // Read SL from files
-						        string slText = File.ReadAllText(SLOrdersFilePath);
+							try
+							{
+								// Read SL from file
+								string slText = File.ReadAllText(SLOrdersFilePath);
+								double stopLossPrice = double.Parse(slText, CultureInfo.InvariantCulture);
 
-						        double stopLossPrice = double.Parse(slText, CultureInfo.InvariantCulture);
+								// Cancel existing SL order if needed
+								if (slOrder != null && slOrder.OrderState == OrderState.Working)
+								{
+									CancelOrder(slOrder);
+								}
 
-						        // Cancel existing orders if needed
-						        if (slOrder != null && slOrder.OrderState == OrderState.Working)
-						        {
-						            CancelOrder(slOrder);
-						        }
+								// Main SL logic
+								if (stopLossPrice > GetCurrentAsk()) // If Stop loss is higher than current price then OK
+								{
+									slOrder = ExitShortStopMarket(Position.Quantity, stopLossPrice, "SL_Stop", "");
+									
+									if (slOrder != null)
+										Print($"[✅ SL SUBMITTED] {stopLossPrice}");
+									else
+										Print($"[❌ ERROR] SL order was not submitted. Value: {stopLossPrice}, Qty: {Position.Quantity}");
+								}
+								else
+								{
+									Print($"[⚠️ WARNING] SL not submitted — SL {stopLossPrice} < market {GetCurrentAsk()}. Closing position at market.");
+									ExitShort("ForceClose_Short");
+								}
 
-
-						        slOrder = ExitLongStopMarket(Position.Quantity, stopLossPrice, "SL_Stop", "");
-			
-								if (slOrder == null)
-								    Print($"[ERROR] SL order was not submitted. Value: {stopLossPrice}, Position qty: {Position.Quantity}");
-								else    	
-						        	Print($"Submitted SL at {stopLossPrice}");
-						        break;	// ✅ Exit loop if success
-						    }
-						    catch (Exception ex)
-						    {
-						        Print($"[ERROR] Reading TP/SL file: {ex.Message}");
-						    }
+								break; // Exit loop after successful read
+							}
+							catch (Exception ex)
+							{
+								Print($"[❌ ERROR] Reading TP/SL file: {ex.Message}");
+							}
 						}
 					}
+
 				}
 				catch (Exception ex)
+				// Prevent exception message from printing multiple times
 				{
 					if (!hasPrintedExceptionMessage)
 						{
@@ -183,32 +189,32 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 			}
 
-			// Handle long positions
-			if (executeLongTrade)
+			// Handle short positions
+			if (executeShortTrade)
 			{
 				try
 				{
-					if (longOrder1 == null || longOrder1.OrderState != OrderState.Working)
+					if (shortOrder1 == null || shortOrder1.OrderState != OrderState.Working)
 					{
-						if (entryPriceLongOnly <= GetCurrentAsk())
+						if (entryPriceShortOnly <= GetCurrentAsk())
 						{
-							Print("Error: Buy stop order price must be above the current market price.");
-							executeLongTrade = false; // Reset flag
+							Print("Error: Sell stop order price must be above the current market price.");
+							executeShortTrade = false; // Reset flag
 							return; // Exit without placing the order
 						}
 
-						longOrder1 = EnterLongStopMarket(0, true, 1, entryPriceLongOnly, "Long1"); // Third parameter is an order size
-                        orderCreationCandle[longOrder1.OrderId] = CurrentBar; // Track candle index for the order
-						// SetStopLoss("Long1", CalculationMode.Price, stopPrice, false);
-						// SetProfitTarget("Long1", CalculationMode.Price, targetPrice1);
-						Print($"1-st LONG stop-market order placed at {entryPriceLongOnly} with TP1: no TP, SL: {stopPrice}");
+						shortOrder1 = EnterShortStopMarket(0, true, 1, entryPriceShortOnly, "Short1"); // Third parameter is an order size
+                        orderCreationCandle[shortOrder1.OrderId] = CurrentBar; // Track candle index for the order
+						// SetStopLoss("Short1", CalculationMode.Price, stopPrice, false);
+						// SetProfitTarget("Short1", CalculationMode.Price, targetPrice1);
+						Print($"1-st SHORT stop-market order placed at {entryPriceShortOnly} with TP1: no TP, SL: {stopPrice}");
 					}
 				}
 				catch (Exception ex)
 				{
-					Print($"Error placing long orders: {ex.Message}");
+					Print($"Error placing short orders: {ex.Message}");
 				}
-				executeLongTrade = false; // Reset flag
+				executeShortTrade = false; // Reset flag
 			}
 		}
 
@@ -222,8 +228,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 			if (Position.MarketPosition == MarketPosition.Flat)
 				currentPositionState = "closed";
-			else if (Position.MarketPosition == MarketPosition.Long)
-				currentPositionState = "opened_long";
+			else if (Position.MarketPosition == MarketPosition.Short)
+				currentPositionState = "opened_short";
 			/* else if (Position.MarketPosition == MarketPosition.Short)
 				currentPositionState = "opened_short"; */
 			else
@@ -233,7 +239,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			if (currentPositionState != lastPositionState)
 			{
 				try
-				{	// Write position state to file (closed or opened_long)
+				{	// Write position state to file (closed or opened_short)
 					File.WriteAllText(PositionStateFilePath, currentPositionState);
 					Print($"Position state updated: {currentPositionState}");
 
@@ -245,16 +251,16 @@ namespace NinjaTrader.NinjaScript.Strategies
 					lastPositionState = currentPositionState; // Update the tracked state
 
 
-					// ✅ Place SL when long is opened
-					if (currentPositionState == "opened_long")
+					// ✅ Place SL when short is opened
+					if (currentPositionState == "opened_short")
 					{
-						double slPrice = GetLastRedCandleLow();
+						double slPrice = GetLastGreenCandleHigh();
 
 						if (slOrder != null && slOrder.OrderState == OrderState.Working)
 							CancelOrder(slOrder);
 
-						slOrder = ExitLongStopMarket(Position.Quantity, slPrice, "SL_LastRed", "");
-						Print($"[SL SET] Stop-loss placed at last red candle low: {slPrice}");
+						slOrder = ExitShortStopMarket(Position.Quantity, slPrice, "SL_LastGreen", "");
+						Print($"[SL SET] Stop-loss placed at last green candle low: {slPrice}");
 					}
 
 					// ✅ Clear OB candle file when position is closed
@@ -281,18 +287,18 @@ namespace NinjaTrader.NinjaScript.Strategies
 		}
 
 
-		private double GetLastRedCandleLow(int lookbackBars = 10)
+		private double GetLastGreenCandleHigh(int lookbackBars = 10)
 		{
 			for (int i = 1; i <= lookbackBars; i++) // Start from 1 to avoid the current forming bar
 			{
-				if (Close[i] < Open[i])
+				if (Close[i] > Open[i])
 				{
-					Print($"[INFO] Found red candle at bar index {i}, low: {Low[i]}");
-					return Low[i];
+					Print($"[INFO] Found green candle at bar index {i}, high: {High[i]}");
+					return High[i];
 				}
 			}
-			Print("[WARN] No red candle found in lookback range");
-			return Low[1]; // Fallback if no red candle is found
+			Print("[WARN] No green candle found in lookback range");
+			return High[1]; // Fallback if no green candle is found
 		}
 	
 	
