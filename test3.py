@@ -19,7 +19,7 @@ nt8_logging_file_path = f'OHLCVData_1.csv'
 # PATH TO FILES
 nt8_buy_sell_signals_for_path = f'trade_signal.txt'
 list_of_orders_path = 'list_of_orders.csv'
-position_state_longs_path = 'position_state_longs.csv'
+position_state_longs_path = 'position_state_shorts.csv'
 position_state_shorts_path = 'position_state_shorts.txt'
 current_order_direction_path = 'current_order_direction.txt'
 current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -46,13 +46,13 @@ def leave_only_last_line():     # Clear file before starting the script
 
 
 def clear_all_files_before_start(state):  # Called from orders_sender.py
-    with open(position_state_shorts_path, 'w', encoding='utf-8') as file:
-        file.write(state)
-        print(f"Position state shorts is set to {state} before starting script")
-
-    with open(position_state_longs_path, 'w', encoding='utf-8') as file:
-        file.write(state)
-        print(f"Position state longs is set to {state} before starting script")
+    # with open(position_state_shorts_path, 'w', encoding='utf-8') as file:
+    #     file.write(state)
+    #     print(f"Position state shorts is set to {state} before starting script")
+    #
+    # with open(position_state_longs_path, 'w', encoding='utf-8') as file:
+    #     file.write(state)
+    #     print(f"Position state longs is set to {state} before starting script")
 
     with open(active_position_file_path, 'w', encoding='utf-8') as file:
         file.write('closed')
@@ -99,16 +99,16 @@ def get_dataframe_from_file(max_time_waiting_for_entry):
 
 
 # Tracks if there is an open position
-def get_position_state_shorts():
-    with open(position_state_shorts_path, 'r', encoding='utf-8') as file:
-        state = file.read()
-        return state
+# def get_position_state_shorts():
+#     with open(position_state_shorts_path, 'r', encoding='utf-8') as file:
+#         state = file.read()
+#         return state
 
 
-def get_position_state_longs():
-    with open(position_state_longs_path, 'r', encoding='utf-8') as file:
-        state = file.read()
-        return state
+# def get_position_state_longs():
+#     with open(position_state_longs_path, 'r', encoding='utf-8') as file:
+#         state = file.read()
+#         return state
 
 
 def get_current_pending_order_direction():

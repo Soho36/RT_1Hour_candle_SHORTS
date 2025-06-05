@@ -43,6 +43,7 @@ def send_buy_sell_orders(
 ):
 
     current_time = pd.to_datetime(datetime.now())
+    # current_time -= timedelta(hours=2)              # Sync with MT5 server time
     current_order_timestamp = pd.to_datetime(current_order_timestamp)
     time_difference_current_time_order = None
 
@@ -88,7 +89,7 @@ def send_buy_sell_orders(
 
                         print('Submitting new order: ', line_order_parameters_nt8)
                         save_order_parameters_to_file(line_order_parameters_nt8)
-
+                        # line_order_parameters_to_order_list = f'{n_index},Buy,{t_price},{s_time}'
                         line_order_parameters_to_order_list = f'{current_order_timestamp}'
                         print('line_order_parameters_to_order_list: ', line_order_parameters_to_order_list)
                         save_list_of_orders_to_file(line_order_parameters_to_order_list)
@@ -113,6 +114,7 @@ def send_buy_sell_orders(
     # +------------------------------------------------------------------+
     if get_position_state_shorts() == '' or get_position_state_shorts() == 'closed' or get_position_state_longs() == 'opened_long':
         if not pd.isna(current_order_timestamp):
+
             if current_signal != last_signal:
                 # If time difference between current and last order is positive then it's accepted:
                 if time_difference_current_time_order < 1:

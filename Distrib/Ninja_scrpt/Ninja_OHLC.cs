@@ -9,8 +9,7 @@ namespace NinjaTrader.NinjaScript.Strategies
     {
         // private string filePath = "E:\\YandexDisk\\Documents\\55\\OHLCVData_1.csv";
 		// private string filePath = "C:\\Users\\Liikurserv\\PycharmProjects\\RT_Ninja\\OHLCVData_1.csv";
-		private string filePath = "C:\\Users\\Liikurserv\\PycharmProjects\\RT_1Hour_candle\\OHLCVData_1.csv";
-		
+		private string filePath = "C:\\Users\\Liikurserv\\PycharmProjects\\RT_1Hour_candle_SHORTS\\OHLCVData_1.csv";
         private bool isLiveData = false;
 
         // OnStateChange is used to initialize the strategy
