@@ -1,25 +1,62 @@
+#region Using declarations
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Xml.Serialization;
+using System.Globalization;
+using System.Threading;
+using NinjaTrader.Cbi;
+using NinjaTrader.Gui;
+using NinjaTrader.Gui.Chart;
+using NinjaTrader.Gui.SuperDom;
+using NinjaTrader.Gui.Tools;
+using NinjaTrader.Data;
 using NinjaTrader.NinjaScript;
+using NinjaTrader.Core.FloatingPoint;
+using NinjaTrader.NinjaScript.Indicators;
+using NinjaTrader.NinjaScript.DrawingTools;
+#endregion
 
 // The namespace and class name must match NinjaTrader conventions
 namespace NinjaTrader.NinjaScript.Strategies
 {
     public class SaveOHLCVToFile : Strategy
-    {
-        // private string filePath = "E:\\YandexDisk\\Documents\\55\\OHLCVData_1.csv";
-		// private string filePath = "C:\\Users\\Liikurserv\\PycharmProjects\\RT_Ninja\\OHLCVData_1.csv";
-		private string filePath = "C:\\Users\\Liikurserv\\PycharmProjects\\RT_1Hour_candle_SHORTS\\OHLCVData_1.csv";
+    {	
+		public enum OHLCPathOption
+		{
+			Shorts,
+			Longs
+		}
+		[NinjaScriptProperty]
+		[Display(Name = "Choose OHLC Path", Order = 1, GroupName = "File Paths")]
+		public OHLCPathOption SelectedPathOption { get; set; }
+		
         private bool isLiveData = false;
-
+		private string OHLCFilePath;
+		
         // OnStateChange is used to initialize the strategy
         protected override void OnStateChange()
         {
-            if (State == State.SetDefaults)
-            {
-                Name = "SaveOHLCVToFile";
-                Calculate = Calculate.OnBarClose; // Trigger logic on bar close
-            }
+            if (State == State.Configure)
+			{
+				switch (SelectedPathOption)
+				{
+					case OHLCPathOption.Shorts:
+						OHLCFilePath = @"C:\Users\Liikurserv\PycharmProjects\RT_1Hour_candle_SHORTS\OHLCVData_1.csv";
+						break;
+					case OHLCPathOption.Longs:
+						OHLCFilePath = @"C:\Users\Liikurserv\PycharmProjects\RT_1Hour_candle\OHLCVData_1.csv";
+						break;
+				}
+			}
             
             else if (State == State.Realtime)
             {
@@ -60,7 +97,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				volume.ToString("F2"));
 
             Print("New line saved to file: " + dataLine);
-            File.AppendAllText(filePath, dataLine + Environment.NewLine);
+            File.AppendAllText(OHLCFilePath, dataLine + Environment.NewLine);
         }
     }
 }
